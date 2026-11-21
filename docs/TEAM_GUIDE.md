@@ -2,9 +2,9 @@
 
 ## 처음 한 번만: 레포 세팅 (팀장)
 
-1. GitHub에서 조직 만들기: 오른쪽 위 + → New organization → Free → 이름 `cocam`
+1. GitHub에서 조직 만들기: 오른쪽 위 + → New organization → Free → 이름 `cocam3`
 2. 조직에 팀원 2명 초대 (People → Invite member)
-3. 레포 만들기: `cocam/giljabi`, README 체크하지 않기
+3. 레포 만들기: `cocam3/giljabi`, README 체크하지 않기
    - **주의: Vercel 무료(Hobby) 플랜은 조직(Organization)의 Private 레포를 배포하지 못한다.** 무료로 배포하려면 레포를 **Public** 으로 만든다. (API 키·개인정보는 원래 커밋 금지라 공개해도 위험이 없다. 포트폴리오로도 바로 쓸 수 있다.)
    - 끝까지 비공개로 두고 싶으면 Private 로 만들고, 배포 방법은 7단계에서 따로 정한다.
 4. 이 시작 파일들을 레포에 올리기 (아래 명령)
@@ -13,7 +13,7 @@
    git add .
    git commit -m "chore: 프로젝트 규칙·가이드 파일 추가"
    git branch -M main
-   git remote add origin https://github.com/cocam/giljabi.git
+   git remote add origin https://github.com/cocam3/giljabi.git
    git push -u origin main
    ```
 5. `.github/CODEOWNERS` 의 `@기획담당아이디` 를 실제 GitHub 아이디로 바꿔서 커밋·push (다음 단계보다 먼저)
@@ -22,7 +22,7 @@
    - Require review from Code Owners (data/rules 보호용)
    - Block force pushes
    - Restrict deletions
-7. Vercel에서 `cocam/giljabi` 연결 (main = 배포, PR마다 미리보기 링크 자동 생성)
+7. Vercel에서 `cocam3/giljabi` 연결 (main = 배포, PR마다 미리보기 링크 자동 생성)
    - Public 레포면 무료로 바로 된다. Private 레포면 Vercel Pro(유료)가 필요하니 팀이 결정할 것.
 8. API 키는 Vercel 환경변수와 각자의 `.env.local` 에만 넣기 (카톡에 키 올리지 않기)
 
