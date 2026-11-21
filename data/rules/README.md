@@ -14,8 +14,10 @@
 |---|---|---|
 | `tracks.csv` | 트랙·학과 목록 | track_id, name, college, day_night, status(운영/모집중지), source, as_of |
 | `courses.csv` | 트랙별 교육과정 | track_id, year, semester, category(전기/전필/전선), course_code, course_name, credits, source, as_of |
-| `requirements.csv` | 졸업요건 | rule_id, applies_to(학번·트랙), type(총학점/전공/교양/비교과/비학점), value, note, source, as_of |
-| `micro_degrees.csv` | 마이크로디그리 | md_id, name, type, course_name, credits, source, as_of |
+| `requirements.csv` | 졸업요건 | rule_id, applies_from(적용 시작 입학년도), applies_until(적용 끝 입학년도, 비우면 현재까지), applies_track(ALL 또는 track_id), type(총학점/전공/교양/비교과/비학점), value, note, source, as_of |
+| `micro_degrees.csv` | 마이크로디그리 | md_id, name, type, needs_application(신청해야 인정되면 true, 자동 인정이면 false), course_name, credits, source, as_of |
+
+> 2026-11-22 변경: `requirements.applies_to` 한 칸을 `applies_from`·`applies_until`·`applies_track` 3열로 나누고, `micro_degrees` 에 `needs_application` 열을 추가했다. 열별 허용값과 검사 규칙은 `docs/tasks/T-002-rules-schema.md`, 이유는 `docs/DECISIONS.md` 참고.
 | `competencies.csv` | 트랙 전공역량·진로 | track_id, competency, career, certificate, source, as_of |
 
 ## 출처 예시
