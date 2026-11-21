@@ -23,7 +23,9 @@ CSV에 잘못된 값이 있으면 "어느 파일 몇 번째 줄 어느 열이 �
    - 추가 사유: 과목명에 쉼표·따옴표가 들어가도 안전하게 CSV를 읽기 위함 (팀 결정, docs/DECISIONS.md 2026-11-21)
    - PR 설명 '새 패키지' 항목에 위 사유를 그대로 적는다.
 2. **스키마** — `lib/data/schemas.ts`
-   - 열 이름·허용값은 `data/rules/README.md` 초안을 **그대로** 따른다. 아래 표에 없는 열·값을 만들지 않는다.
+   - 열 이름·허용값은 **아래 표가 기준**이다. 표는 `data/rules/README.md` 초안에 2026-11-22 기획 확정 사항(docs/DECISIONS.md)을 반영한 것이다. 표에 없는 열·값을 만들지 않는다.
+   - 확정 사항에서 바뀐 열: `requirements.applies_to` 를 `applies_from`·`applies_until`·`applies_track` 3열로 나눔, `micro_degrees.needs_application` 열 추가.
+     구현 시점에 `data/rules/README.md` 가 이 표와 다르면 멈추고 기획 담당에게 묻는다. (AI는 README를 고치지 않는다)
    - 모든 파일 공통
      - `source`: 비어 있지 않은 `http://` 또는 `https://` URL
      - `as_of`: `YYYY-MM-DD` 형식이고 실제로 있는 날짜 (`2026-13-01`, `2026-02-30` 은 오류)
@@ -35,25 +37,32 @@ CSV에 잘못된 값이 있으면 "어느 파일 몇 번째 줄 어느 열이 �
      |---|---|---|
      | `tracks.csv` | `track_id` | 필수 문자열, 파일 안에서 중복 금지 |
      | | `name`, `college` | 필수 문자열 |
-     | | `day_night` | 필수 문자열 (허용값 확정 전. 아래 '확정 필요' 1) |
+     | | `day_night` | `주간` \| `야간` |
      | | `status` | `운영` \| `모집중지` |
      | `courses.csv` | `track_id` | 필수, `tracks.csv` 에 있는 값 |
-     | | `year`, `semester` | 필수 정수, 1 이상 (의미 확정 전. '확정 필요' 2) |
+     | | `year` | 권장 이수 **학년**. 정수 `1` ~ `4` |
+     | | `semester` | 권장 이수 학기. 정수 `1` \| `2` (계절학기는 데이터에 넣지 않음) |
      | | `category` | `전기` \| `전필` \| `전선` |
      | | `course_code`, `course_name` | 필수 문자열 |
      | | `credits` | 필수 숫자, 0 이상 (0학점 허용, 음수·`3학점` 같은 글자는 오류) |
      | `requirements.csv` | `rule_id` | 필수, 파일 안에서 중복 금지 |
-     | | `applies_to` | 필수 문자열 (형식 확정 전. '확정 필요' 3) |
+     | | `applies_from` | 적용 시작 입학년도. 필수, 4자리 정수 (예: `2000`) |
+     | | `applies_until` | 적용 끝 입학년도. 선택, 4자리 정수. 비어 있으면 "현재까지". `applies_from` 보다 작으면 오류 |
+     | | `applies_track` | `ALL`(모든 트랙) 또는 `tracks.csv` 에 있는 `track_id` |
      | | `type` | `총학점` \| `전공` \| `교양` \| `비교과` \| `비학점` |
-     | | `value` | 필수 문자열 (숫자 변환은 규칙 엔진에서. '확정 필요' 4) |
+     | | `value` | `type` 에 따라 다름 (아래 참고) |
      | | `note` | 선택 |
      | `micro_degrees.csv` | `md_id`, `name`, `course_name` | 필수 문자열 (`md_id` 는 과목마다 한 줄이라 중복 허용) |
-     | | `type` | 필수 문자열 (허용값 확정 전. '확정 필요' 5) |
+     | | `type` | 필수 문자열 (자유 문자열. 허용값은 정하지 않음) |
+     | | `needs_application` | 신청해야 인정되는지. `true` \| `false` (대소문자 무관 — 엑셀의 `TRUE`/`FALSE` 허용). 그 외 값은 오류. boolean으로 변환 |
      | | `credits` | 필수 숫자, 0 이상 |
      | `competencies.csv` | `track_id` | 필수, `tracks.csv` 에 있는 값 |
      | | `competency`, `career` | 필수 문자열 |
      | | `certificate` | 선택 |
 
+   - `requirements.value` 규칙 (`type` 기준 판별 유니온으로 만든다)
+     - `총학점`·`전공`·`교양`·`비교과`: 0 이상의 숫자 → `number` 로 변환. `9학점` 같은 글자는 오류
+     - `비학점`: 비어 있지 않은 문장 → `string` 그대로. 규칙 엔진이 자동 판정하지 않고, 화면에서 학생이 직접 체크하는 항목으로 쓴다 (T-006·T-007)
    - 각 스키마에서 타입을 export 한다. (예: `export type Track = z.infer<typeof trackSchema>`)
 3. **CSV 읽기** — `lib/data/parseCsv.ts`
    - papaparse로 `header: true`, `skipEmptyLines: true`, `comments: '#'` 로 읽는다. (`#` 로 시작하는 줄은 주석)
@@ -67,7 +76,10 @@ CSV에 잘못된 값이 있으면 "어느 파일 몇 번째 줄 어느 열이 �
      - 오류 한 건 = `{ file, line, column, message }`. `line` 은 엑셀에서 보이는 줄 번호다. (열 이름 줄 = 1, 주석 줄도 센다)
      - `message` 는 한국어로 쓴다. 예: `courses.csv 4번째 줄 credits: 0 이상의 숫자여야 합니다 (입력값: "3학점")`
    - 파일이 없으면 그 파일 이름을 적은 오류를 던진다.
-   - 교차 검사: `courses.track_id`·`competencies.track_id` 가 `tracks.track_id` 에 없으면 오류
+   - 교차 검사
+     - `courses.track_id`·`competencies.track_id` 가 `tracks.track_id` 에 없으면 오류
+     - `requirements.applies_track` 이 `ALL` 도 아니고 `tracks.track_id` 에도 없으면 오류
+     - `micro_degrees` 에서 같은 `md_id` 행끼리 `name`·`type`·`needs_application` 이 다르면 오류 (한 마이크로디그리는 한 가지 값만 가짐)
    - 이 로더는 Node `fs` 를 쓰므로 서버 코드에서만 import 한다. 파일 맨 위에 주석으로 남긴다.
 5. **내보내기** — `lib/data/index.ts` (T-001의 빈 파일을 대체): 스키마, 타입, `parseRules`, `loadRules`, `RulesValidationError`
 6. **가짜 데이터** — `tests/fixtures/rules/` 에 5개 파일, 각 3줄
@@ -79,7 +91,10 @@ CSV에 잘못된 값이 있으면 "어느 파일 몇 번째 줄 어느 열이 �
      - `source`: `https://example.com/fake`
      - `as_of`: `2000-01-01`
    - **실제 한성대 트랙명·과목명·학점 기준을 쓰지 않는다.**
-   - 세 줄 안에 `courses` 의 `credits = 0` 행 1개와, 쉼표가 들어간 따옴표 과목명 1개(예: `"가짜과목2, 실습"`)를 넣는다.
+   - 세 줄 안에 아래 경우를 넣는다
+     - `courses`: `credits = 0` 행 1개, 쉼표가 들어간 따옴표 과목명 1개(예: `"가짜과목2, 실습"`)
+     - `requirements`: `비학점` 행 1개(문장 value), `applies_until` 이 빈 행 1개, `applies_track = ALL` 행 1개
+     - `micro_degrees`: 같은 `md_id` 의 과목 2줄(`needs_application = false`)과 다른 `md_id` 1줄(`TRUE`)
 7. **테스트** — `tests/data/loadRules.test.ts`
    - 정상: `loadRules('tests/fixtures/rules', { fileSuffix: '.fake.csv' })` 가 5종 각 3행을 돌려준다.
    - 정상: 쉼표가 든 과목명을 그대로 읽는다. `credits = 0` 을 허용한다.
@@ -90,6 +105,14 @@ CSV에 잘못된 값이 있으면 "어느 파일 몇 번째 줄 어느 열이 �
      - `as_of` = `2026-13-01`
      - `category` = `교양` (courses 허용값 아님)
      - `credits` = `-1`, `credits` = `3학점`
+     - `day_night` = `주 간`
+     - `year` = `0`, `year` = `5`, `semester` = `3`
+     - `applies_from` = `22` (4자리 아님), `applies_until` < `applies_from`
+     - `applies_track` 이 `tracks` 에 없는 값
+     - `type = 전공` 인데 `value` = `9학점`, `type = 비학점` 인데 `value` 빈 값
+     - `needs_application` = `yes`
+     - 같은 `md_id` 인데 `needs_application` 이 서로 다름
+   - 정상 경계값: `year` = `1`·`4`, `applies_until` = `applies_from` (한 해만 적용), `needs_application` = `TRUE`·`false`
      - 열 빠짐, 모르는 열 있음
      - `track_id` 중복, `rule_id` 중복
      - `courses` 에 `tracks` 에 없는 `track_id`
@@ -111,12 +134,15 @@ CSV에 잘못된 값이 있으면 "어느 파일 몇 번째 줄 어느 열이 �
 ## 필요한 데이터
 - 실제 CSV 5종은 이 작업에 필요 없다. 가짜 데이터로만 테스트한다.
 - **데이터 필요 (기획 담당, 이 작업과 별도)**: `data/rules/` 에 실제 CSV 5종. 열은 위 표 기준이다.
-- **기획 확정 필요** — 확정되면 스키마를 좁히는 후속 작업을 따로 만든다. 이번에는 문자열·정수로만 받는다.
-  1. `tracks.day_night` 의 허용값 (예: 주간/야간처럼 정해진 값이 있는지)
-  2. `courses.year` 가 학년(1~4)인지 교육과정 연도(2026)인지, `semester` 에 계절학기가 있는지
-  3. `requirements.applies_to` 의 형식 (학번 범위·트랙을 한 칸에 어떻게 적는지)
-  4. `requirements.value` 가 항상 숫자인지 (`비학점` 유형의 값은 무엇인지)
-  5. `micro_degrees.type` 의 허용값
+- **기획 확정 사항 (2026-11-22)** — 위 2번 표에 반영됨. 근거는 docs/DECISIONS.md
+  1. `tracks.day_night`: `주간` \| `야간`
+  2. `courses.year`·`semester`: 권장 이수 학년 1~4, 학기 1 \| 2 (계절학기 제외)
+  3. `requirements.applies_to` → `applies_from`·`applies_until`·`applies_track` 3열로 나눔
+  4. `requirements.value`: 학점·횟수 유형은 숫자, `비학점` 은 문장 (학생이 직접 체크)
+  5. `micro_degrees.type`: 자유 문자열 유지. 대신 `needs_application`(true/false) 열 추가
+- **사람이 할 일 (이 작업 전)**: 기획 담당이 `data/rules/README.md` 의 열 목록을 위 표에 맞게 고친다. (3번 열 나누기, 5번 열 추가)
+- **데이터 필요 (kyu0lee)**: 마이크로디그리 유형 목록과 유형별 `needs_application` 값. 출처 페이지에서 확인해 `micro_degrees.csv` 에 채운다.
+- **알려진 한계**: 입학년도마다 교육과정이 다르면 `courses.csv` 에 교육과정 적용 연도 열이 필요할 수 있다. 실제 데이터를 넣을 때 확인한다.
 
 ## 완료 조건
 - [ ] (기능) 가짜 데이터 폴더를 읽으면 5종 각 3행이 타입이 붙어 반환된다.
@@ -130,7 +156,7 @@ CSV에 잘못된 값이 있으면 "어느 파일 몇 번째 줄 어느 열이 �
 
 ## 하지 말 것
 - 실제 학교 규정·과목명·학점·트랙명을 지어내거나 가짜 데이터에 섞기
-- '확정 필요' 항목을 추측해서 enum으로 좁히기
+- 표에 정한 것 외의 허용값을 추측해 넣기, `micro_degrees.type` 을 enum으로 좁히기
 - 오류를 `try/catch` 로 삼키고 빈 데이터 돌려주기
 - 화면(`app/**`)에 로더 연결하기 (이후 작업)
 - 요청 범위 밖 리팩터링, 위 외의 패키지 추가
