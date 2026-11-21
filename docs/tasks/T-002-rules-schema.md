@@ -62,7 +62,7 @@ CSV에 잘못된 값이 있으면 "어느 파일 몇 번째 줄 어느 열이 �
 
    - `requirements.value` 규칙 (`type` 기준 판별 유니온으로 만든다)
      - `총학점`·`전공`·`교양`·`비교과`: 0 이상의 숫자 → `number` 로 변환. `9학점` 같은 글자는 오류
-     - `비학점`: 비어 있지 않은 문장 → `string` 그대로. 규칙 엔진이 자동 판정하지 않고, 화면에서 학생이 직접 체크하는 항목으로 쓴다 (T-006·T-007)
+     - `비학점`: 비어 있지 않은 문장 → `string` 그대로. 규칙 엔진이 자동 판정하지 않고, 화면에서 학생이 직접 체크하는 항목으로 쓴다 (T-007·T-008)
    - 각 스키마에서 타입을 export 한다. (예: `export type Track = z.infer<typeof trackSchema>`)
 3. **CSV 읽기** — `lib/data/parseCsv.ts`
    - papaparse로 `header: true`, `skipEmptyLines: true`, `comments: '#'` 로 읽는다. (`#` 로 시작하는 줄은 주석)
