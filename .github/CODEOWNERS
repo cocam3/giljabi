@@ -1,0 +1,6 @@
+# 이 경로가 바뀌는 PR은 아래 사람이 반드시 승인해야 merge 된다.
+
+/data/rules/        @sol0404
+/AGENTS.md          @sol0404
+/CLAUDE.md          @sol0404
+/.github/           @sol0404
