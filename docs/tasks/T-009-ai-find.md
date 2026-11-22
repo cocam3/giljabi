@@ -1,7 +1,9 @@
 # 작업지시서 T-009: 찾다 — AI 트랙·과목 추천 (초안)
 
 > Claude가 작성하고, Codex가 수행하고, 사람이 승인한다.
-> **상태: 초안.** AI 회사 결정(부록 A) 전에는 구현을 시작하지 않는다.
+> **상태: 초안.**
+> - 개발은 **Gemini 무료 등급**으로 시작한다. (2026-11-22 결정, 부록 A)
+> - 최종 AI 회사는 실제 트랙 데이터가 들어온 뒤 2부 평가로 정한다.
 > ROADMAP의 T-009(역량 추출)와 T-010(추천·대조)을 하나로 합쳤다. 아래 설계에서는 AI 한 번 호출로 둘을 같이 하기 때문이다. T-010 번호는 비워 둔다.
 
 ## 담당
@@ -11,7 +13,7 @@
 - 브랜치: 2개 PR로 나눈다
   - `feat/T-009-ai-find-api`: 1부 (API·검증·단위 테스트)
   - `feat/T-009-ai-find-eval`: 2부 (성능 평가 세트·평가 스크립트)
-- 선행 작업: T-001, T-002 merge. AI 회사 결정. 실제 `competencies.csv`·`courses.csv` 데이터는 2부의 실제 평가에만 필요하다.
+- 선행 작업: T-001, T-002 merge. 1부는 가짜 데이터로 할 수 있다. 실제 `competencies.csv`·`courses.csv` 데이터는 2부의 실제 평가에만 필요하다.
 
 ## 목표 (한두 문장)
 학생이 희망 직무를 적거나 채용공고를 붙여 넣으면, `data/rules` 에 **실제로 있는** 트랙·과목만 근거와 함께 최대 3개 추천한다.
@@ -43,9 +45,11 @@ AI가 지어낸 트랙·과목·역량은 화면에 **한 건도** 나오지 않
 - AI는 트랙 이름이나 과목 이름을 **쓰지 않는다**. 후보 목록의 임시 번호(`T3`, `K12`)만 돌려준다.
 - 화면에 보이는 트랙명·과목명·학점·출처 URL은 코드가 `data/rules` 에서 꺼내 채운다. 그래서 AI가 이름을 지어내도 화면에는 나올 수 없다.
 - AI가 직접 쓰는 글자는 "공고에서 찾은 역량"의 짧은 이름(`label`)과 공고 원문 인용(`quote`)뿐이다. `quote` 는 공고·직무 입력에 **그대로 들어 있는 문장**이어야 하며, 코드가 확인한다.
-- 추천 이유 문장은 AI가 쓰지 않고 코드가 템플릿으로 만든다.
-  - 예: `공고의 "대용량 데이터 처리"가 이 트랙의 "빅데이터 처리" 역량과 맞아요`
-  - 대가: 설명이 덜 자연스럽다. 평가에서 문제가 되면 이후 작업에서 AI 문장을 검증과 함께 추가한다.
+- 추천 이유 문장은 AI가 쓰지 않는다. 코드가 **템플릿에 검증된 공고 원문 인용을 끼워 넣어** 만든다. (2026-11-22 확정)
+  - 템플릿: `공고의 "{posting_quote}" 부분이 이 트랙의 "{competency}" 역량과 맞아요`
+  - `{posting_quote}`: 6번 대조 1단계를 통과한 `quote` (원문에 그대로 있는 것만)
+  - `{competency}`: `data/rules` 의 역량 문자열
+  - 인용이 40자를 넘으면 앞 40자 + `…` 로 줄여 보여 준다. 전체 인용은 `reasons[].posting_quote` 에 그대로 둔다.
 
 ---
 
@@ -56,10 +60,12 @@ AI가 지어낸 트랙·과목·역량은 화면에 **한 건도** 나오지 않
 | 필드 | 형식 | 규칙 |
 |---|---|---|
 | `jobTitle` | string | 선택, trim 후 1~50자 |
-| `jobPosting` | string | 선택, trim 후 1~5,000자 (초과하면 400 오류, 잘라 내지 않음) |
+| `jobPosting` | string | 선택, trim 후 1자 이상. **5,000자를 넘으면 앞 5,000자만 쓰고** `notices` 에 "공고가 길어서 앞부분 5,000자만 분석했어요"를 넣는다 (2026-11-22 확정). 이모지 같은 문자가 중간에 깨지지 않게 글자(code point) 단위로 자른다 |
 | `interests` | string[] | 선택, 최대 5개, 각 1~20자 |
 
 - `jobTitle` 과 `jobPosting` 중 하나는 반드시 있어야 한다. 둘 다 없으면 400 오류: "희망 직무나 채용공고 중 하나는 입력해 주세요"
+- 요청 본문 전체가 50,000자를 넘으면 자르지 않고 413 오류로 거절한다. (비정상 요청 차단용. 정상 사용자는 위의 5,000자 자르기에 걸림)
+- 자른 뒤의 공고가 이후 모든 단계(가리기, AI 전달, 인용 검증)의 기준 원문이다.
 - 제어 문자는 지운다. 줄바꿈과 탭은 남긴다.
 - 학번·이름·성적 같은 학생 정보 필드는 **없다.** 추천에 필요하지 않다.
 
@@ -72,9 +78,12 @@ AI로 보내기 전에 입력 문자열에서 아래를 `[가림]` 으로 바꾼
 가린 것이 있으면 응답의 `notices` 에 "개인정보로 보이는 부분을 가리고 분석했어요"를 넣는다.
 테스트: 가린 뒤의 문자열(실제로 AI에 보낼 값)에 원래 값이 남아 있지 않아야 한다.
 
+> **이 단계는 생략할 수 없다.** 개발 중에는 Gemini 무료 등급을 쓰는데, 무료 등급은 입력이 Google 제품 개선에 쓰일 수 있다(부록 A). 그래서 AI 호출 함수는 가리기를 거친 값만 받도록 타입으로 막는다.
+> - 예: `RedactedText` 같은 브랜드 타입을 두고, `redact()` 만 그 타입을 만들 수 있게 한다.
+
 ### 3. 후보 목록 만들기 — `lib/ai/find/candidates.ts` (순수 함수)
 - T-002 로더로 읽은 `tracks`·`competencies`·`courses` 로 후보 목록을 만든다.
-- 대상 트랙은 `status = 운영` 인 것만이다. (모집중지 트랙은 추천하지 않음. '결정 필요' 2)
+- 대상 트랙은 `status = 운영` 인 것만이다. 모집중지 트랙과 그 역량·과목은 후보에 넣지 않는다. (2026-11-22 확정)
 - 요청마다 임시 번호를 붙인다
   - 트랙: `T1`, `T2`…
   - 역량(competencies 행): `C1`, `C2`…
@@ -106,12 +115,19 @@ AI로 보내기 전에 입력 문자열에서 아래를 `[가림]` 으로 바꾼
 ```
 - **태그 탈출 막기**: 사용자 입력 안에 있는 `<candidates>`, `</job_posting>` 같은 우리 태그 이름(여는 태그·닫는 태그, 대소문자 무관)을 넣기 전에 지운다. 지웠으면 `notices` 에 남기지 않는다. (공격자에게 힌트를 주지 않기 위함)
 
-**AI 호출 (`client.ts`)**
+**AI 호출 (`client.ts`)** — AI 회사 SDK를 import하는 **유일한 파일**
 - 서버 전용 모듈이다. 맨 위에 `import "server-only"` 를 둘지는 T-001 결과를 보고 정한다. 패키지 추가가 필요하면 멈추고 묻는다.
-- 정한 회사의 공식 SDK 하나만 쓴다. 회사의 **구조화 출력(JSON 스키마 강제)** 기능으로 7번 형식을 강제한다.
-- 키: `process.env.ANTHROPIC_API_KEY` 또는 `process.env.OPENAI_API_KEY` (결정 후 하나). 없으면 503 오류: "AI 기능이 아직 설정되지 않았어요"
+- 바깥에는 회사와 상관없는 함수 하나만 내보낸다
+  - 모양: `generateStructured({ system, user, jsonSchema }) → { json, usage, stopReason }`
+  - `route.ts` 와 평가 스크립트는 이 함수만 부른다. 나중에 회사를 바꿀 때 이 파일만 고치면 되게 한다.
+- **개발용 회사: Google Gemini 무료 등급** (2026-11-22 결정)
+  - SDK: 공식 `@google/genai` 하나만 추가한다.
+  - 키: `process.env.GEMINI_API_KEY`. 없으면 503 오류: "AI 기능이 아직 설정되지 않았어요"
+  - 모델: 무료 등급이 있는 Flash 계열 중 하나를 상수 한 곳에 둔다. 구현할 때 공식 가격표에서 무료 여부와 정확한 모델 ID를 확인한다.
+  - 2026-12-01에 다른 모델로 넘어간다고 공지된 Gemini 2.5 계열은 쓰지 않는다.
+- 회사의 **구조화 출력(JSON 스키마 강제)** 기능으로 5번 형식을 강제한다. Gemini는 JSON Schema 지정 출력을 지원한다.
 - 시간 제한 20초. 응답 최대 길이는 출력 형식에 맞게 작게 잡는다.
-- 모델 이름은 코드 한 곳(상수)에만 둔다. 평가에서 바꿔 보기 쉽게 하기 위함이다.
+- 429(호출 한도 초과)는 재시도하지 않는다. 503 "지금 사용하는 사람이 많아요. 잠시 뒤 다시 해 주세요"로 돌려준다. 무료 등급은 하루 호출 한도가 낮을 수 있다.
 
 ### 5. AI 출력 스키마 — `aiFindOutputSchema`
 
@@ -158,8 +174,8 @@ AI 출력과 `refMap`, 가린 입력 원문을 받아 아래 순서로 거른다
   recommendations: Array<{
     track_id: string; track_name: string; college: string   // data/rules
     fit: "높음" | "보통"
-    reasons: Array<{ posting_label: string; posting_quote: string; competency: string; career: string }>
-    // competency·career는 data/rules, posting_*는 검증된 AI 출력
+    reasons: Array<{ text: string; posting_label: string; posting_quote: string; competency: string; career: string }>
+    // text = 핵심 설계의 템플릿 문장, competency·career는 data/rules, posting_*는 검증된 AI 출력
     courses: Array<{ course_code: string; course_name: string; category: string; credits: number; year: number; semester: number }> // data/rules
     sources: string[]   // 사용한 행들의 source URL (중복 제거)
     as_of: string       // 사용한 행 중 가장 오래된 as_of
@@ -182,9 +198,16 @@ AI 출력과 `refMap`, 가린 입력 원문을 받아 아래 순서로 거른다
 ### 9. 단위 테스트 (네트워크·실제 AI 없이) — `tests/ai/`
 AI 호출은 가짜 함수로 바꾼다. **실제 AI를 부르는 테스트는 `npm test` 에 넣지 않는다.**
 - `tests/ai/schemas.test.ts`: 입력 경계값
-  - 공고 5,000자 통과, 5,001자 오류
+  - 공고 5,000자: 그대로, 안내 없음
+  - 5,001자: 앞 5,000자로 잘리고 "앞부분 5,000자만" 안내가 붙음
+  - 끝에 이모지가 걸쳐도 깨지지 않음
+  - 본문 50,001자 → 413
   - 직무·공고 둘 다 없음 → 오류
   - `interests` 6개 → 오류
+- `tests/ai/reasons.test.ts`: 템플릿 문장
+  - 검증된 인용과 데이터 역량이 템플릿에 들어간다
+  - 40자 넘는 인용은 `…` 로 줄어든다
+  - 검증에 떨어진 인용으로는 문장이 만들어지지 않는다
 - `tests/ai/redact.test.ts`: 이메일·전화번호·학번형 숫자를 가린다. 연도·금액은 그대로 둔다.
 - `tests/ai/candidates.test.ts`
   - 모집중지 트랙 제외
@@ -208,13 +231,17 @@ AI 호출은 가짜 함수로 바꾼다. **실제 AI를 부르는 테스트는 `
 - `app/api/find/route.ts`
 - `lib/ai/client.ts`
 - `lib/ai/find/schemas.ts`, `lib/ai/find/redact.ts`, `lib/ai/find/candidates.ts`, `lib/ai/find/prompt.ts`, `lib/ai/find/guardrail.ts`
+- `lib/ai/find/reasons.ts`: 템플릿 문장 만들기 (순수 함수)
 - `tests/ai/*.test.ts`, `tests/ai/fixtures/injection-cases.json`
-- `package.json`, `package-lock.json`: 정한 회사의 공식 SDK 하나만 추가
+- `package.json`, `package-lock.json`: `@google/genai` 하나만 추가
+- `.env.example`: `GEMINI_API_KEY=` 한 줄 추가 (기존 줄은 건드리지 않음)
 
 ### 1부 완료 조건
 - [ ] (기능) 키가 설정된 로컬에서 `POST /api/find` 에 `{ "jobTitle": "데이터 분석가" }` 를 보내면 7번 형식의 JSON이 온다. 트랙명·과목명은 전부 `data/rules`(또는 가짜 데이터)에 있는 값이다.
 - [ ] (기능) 키가 없으면 503과 안내 문구가 온다.
-- [ ] (테스트) 9번의 5개 테스트 파일이 있고, 인젝션 케이스는 9개 이상이다.
+- [ ] (테스트) 9번의 6개 테스트 파일이 있고, 인젝션 케이스는 9개 이상이다.
+- [ ] AI 회사 SDK(`@google/genai`)를 import하는 파일이 `lib/ai/client.ts` 하나뿐이다. (검색으로 확인)
+- [ ] AI 호출 함수가 가리기를 거치지 않은 문자열을 받으면 타입 검사에서 막힌다.
 - [ ] `npm run lint && npm run typecheck && npm test && npm run build` 통과
 - [ ] 브라우저로 내려가는 코드에 API 키 이름·값이 없다. (`npm run build` 결과물에서 키 이름을 검색해 확인)
 - [ ] 로그에 입력 원문이 남지 않는다. (테스트 또는 코드로 확인)
@@ -277,7 +304,14 @@ AI 호출은 가짜 함수로 바꾼다. **실제 AI를 부르는 테스트는 `
 - 실행: `npx tsx scripts/ai/eval.ts` (tsx는 T-003에서 추가됨). package.json 스크립트는 추가하지 않는다.
 - **실제 AI를 부르고 돈이 든다.** 실행 전에 예상 호출 수와 예상 비용을 화면에 보여 주고, `--yes` 가 없으면 멈춘다.
   - 기본 호출 수: 평가 20 × 3회 + 인젝션 9 × 3회 = 87회
-- `--model` 로 모델을 바꿔 돌릴 수 있게 한다. 같은 세트로 모델·회사를 비교하기 위함이다.
+- `--provider gemini|anthropic|openai` 와 `--model` 로 회사·모델을 바꿔 돌린다.
+  - 최종 결정용 비교: 세 회사의 소형·중간 모델, 총 6가지 조합 (2026-11-22 결정, 부록 A)
+  - 회사별 연결 코드는 `lib/ai/client.ts` 의 공통 함수 뒤에 둔다. 앱(`route.ts`)은 환경변수로 정한 회사 하나만 쓴다.
+- 비교용 SDK 2개(`@anthropic-ai/sdk`, `openai`)는 2부에서 devDependencies로 추가한다. PR 설명 '새 패키지'에 "AI 회사 비교 평가용"이라고 적는다.
+  - 최종 회사가 정해지면 그 회사 SDK만 dependencies에 남기는 정리 작업을 따로 한다.
+- 무료 등급은 하루 호출 한도가 낮을 수 있다.
+  - 429가 나면 기다렸다가 다시 시도한다.
+  - 중간에 멈춰도 `results.jsonl` 에서 이어서 돌릴 수 있게 한다 (`--resume`).
 - 1부의 실제 API 경로 함수(입력 검증 → 대조)를 그대로 호출한다. 평가만을 위한 별도 경로를 만들지 않는다.
 - 결과는 `private/ai-eval/{날짜}-{모델}/` 에 저장하고 커밋하지 않는다.
   - `results.jsonl`: 문항별 원시 출력, 버린 개수, 시간, 토큰 수
@@ -288,10 +322,14 @@ AI 호출은 가짜 함수로 바꾼다. **실제 AI를 부르는 테스트는 `
 - `tests/ai/eval/cases.json`
 - `scripts/ai/eval.ts`
 - `scripts/ai/README.md`: 실행 방법, 비용 주의, 기대 트랙 채우는 방법
+- `lib/ai/client.ts`: Anthropic·OpenAI 연결 추가 (공통 함수 모양은 바꾸지 않음)
+- `package.json`, `package-lock.json`: devDependencies `@anthropic-ai/sdk`, `openai`
+- `.env.example`: `ANTHROPIC_API_KEY`·`OPENAI_API_KEY` 는 이미 있음. 확인만 한다
 
 ### 2부 완료 조건
 - [ ] (기능) 가짜 데이터와 가짜 AI 함수로 `eval.ts --dry-run` 을 실행하면 `report.md` 가 11번 표 형식으로 생성된다.
-- [ ] (실제 평가, 임솔 확인) 기대 트랙을 채운 뒤 실제 모델로 1회 실행하고, `report.md` 요약을 PR에 붙인다. 필수 지표 1~4를 통과한다.
+- [ ] (실제 평가, 임솔 확인) 기대 트랙을 채운 뒤 Gemini 무료 모델로 1회 실행하고, `report.md` 요약을 PR에 붙인다. 필수 지표 1~4를 통과한다.
+- [ ] (회사 비교, 임솔이 결제 후 실행) 세 회사 × 소형·중간 6조합 결과를 한 표로 모은 `private/ai-eval/compare.md` 를 만든다. 지표는 11번의 1~12, 열은 조합별이다. 요약은 PR이나 결정 기록에 옮긴다.
 - [ ] `npm run lint && npm run typecheck && npm test && npm run build` 통과 (실제 AI 호출 없이)
 - [ ] `private/` 아래 결과가 커밋에 없음
 
@@ -302,29 +340,43 @@ AI 호출은 가짜 함수로 바꾼다. **실제 AI를 부르는 테스트는 `
 - `lib/data/**`, `lib/rules/**`: T-002 로더는 import만 한다
 - `app/` 의 다른 화면: 찾다 화면은 T-011
 - `next.config.*`, `tsconfig.json`, `vitest.config.ts`, `eslint.config.*`, package.json 스크립트
-- `AGENTS.md`, `CLAUDE.md`, `docs/**`, `.github/**`, `.env.example`
+- `AGENTS.md`, `CLAUDE.md`, `docs/**`, `.github/**`
+- `.env.example` 의 기존 줄 (1부에서 `GEMINI_API_KEY=` 추가만 허용)
 
 ## 필요한 데이터
 - **데이터 필요 (kyu0lee)**: 5개 트랙의 실제 `competencies.csv`·`courses.csv`. 2부 실제 평가 전까지.
 - **데이터 필요 (임솔·kyu0lee)**: 평가 세트 Q01~Q15, Q19의 기대 트랙. 실제 트랙 데이터가 들어온 뒤 채운다. 두 사람이 따로 적고, 다르면 상의해서 정한다.
 
-## 결정 필요 (임솔)
-1. **AI 회사와 모델**: 부록 A 비교표 참고. 1부 시작 전.
-2. **모집중지 트랙을 추천에서 뺄지**: 이 초안은 뺀다. 이미 그 트랙에 있는 학생을 위해 '참고'로 보여 줄지 정한다.
-3. **공고 최대 길이 5,000자**가 적당한지. 실제 채용공고 몇 개를 붙여 보고 정한다.
-4. **추천 이유를 템플릿으로만 만들지**: 이 초안은 템플릿이다. 평가 후 AI 문장을 넣을지 정한다.
+## 확정 사항 (2026-11-22, 임솔)
+1. 모집중지 트랙은 추천에서 뺀다. (3번)
+2. 공고는 최대 5,000자. 넘으면 앞 5,000자만 쓰고 안내한다. (1번)
+3. 추천 이유는 템플릿으로만 만들고, 검증된 공고 원문 인용을 끼워 넣는다. (핵심 설계, 7번)
+4. AI 회사
+   - 개발 중에는 Gemini 무료 등급으로 하고, `lib/ai/client.ts` 한 곳에서만 부른다.
+   - 실제 트랙 데이터가 들어온 뒤 평가 세트로 Gemini·Anthropic·OpenAI의 소형·중간 모델을 비교해 정한다.
+   - 결제는 임솔이 한다. 유료로 바꿀 때는 월 사용 한도를 먼저 걸어 둔다.
+   - 무료 등급은 입력이 학습에 쓰일 수 있으므로 개인정보 가리기(2번)를 반드시 적용한다.
+
+## 남은 결정 (임솔)
+1. **최종 AI 회사·모델**: 2부 비교 결과를 보고 정한다.
+2. **사용성 테스트(12월 중순) 때 무료 등급을 계속 쓸지**
+   - 실제 학생이 입력한 내용이 무료 등급에서는 Google 제품 개선에 쓰일 수 있다. 개인정보는 가리지만 그 밖의 입력은 그대로 간다.
+   - 그 전에 유료 등급(또는 다른 회사)으로 바꿀지, 아니면 화면과 동의서에 이 사실을 알릴지 정한다.
+3. **Gemini 개발용 모델 ID**: 무료 등급이 있는 Flash 계열 중 하나. 구현 시 공식 가격표에서 확인한다.
 
 ## 하지 말 것
 - 트랙·과목·역량 이름을 AI 출력에서 그대로 화면에 쓰기 (반드시 `refMap` 으로 데이터에서 채움)
 - 사용자 입력을 시스템 프롬프트에 넣기, 입력 원문을 로그에 남기기
 - 스키마·대조 실패를 `try/catch` 로 삼키고 빈 추천을 "정상"처럼 돌려주기 (실패는 실패로 알림)
 - `npm test` 에서 실제 AI 호출하기
-- 정한 회사 SDK 외의 패키지 추가 (LangChain 같은 프레임워크 포함)
+- 위에 적은 SDK(1부 `@google/genai`, 2부 비교용 2개) 외의 패키지 추가 (LangChain 같은 프레임워크 포함)
+- `lib/ai/client.ts` 밖에서 AI 회사 SDK를 import하기
 - 평가 기대 트랙을 AI가 채우기
 
 ## 남은 문제 (이번 범위 밖)
 - IP별 호출 제한: Vercel 서버리스에서는 메모리 카운터가 정확하지 않음. 시연 전에 필요하면 따로 작업한다.
 - 추천 결과 캐시: 같은 입력이 반복될 때 비용을 줄일 수 있다. 평가 후 비용을 보고 정한다.
+- Gemini 무료 등급의 정확한 호출 한도(분당·하루)는 확인하지 못했다. 모델별로 다르고 바뀔 수 있다. 시연 중 한도에 걸리지 않게 시연 전에 유료 전환 여부를 정한다.
 
 ## 보고 형식 (Codex가 끝나고 남길 것)
 - 바꾼 파일 목록
@@ -334,47 +386,89 @@ AI 호출은 가짜 함수로 바꾼다. **실제 AI를 부르는 테스트는 `
 
 ---
 
-## 부록 A. AI 회사 비교 (결정용 자료, 2026-11-22 확인)
+## 부록 A. AI 회사 비교 (2026-11-22 확인)
 
-> 이 지시서를 쓴 Claude는 Anthropic이 만든 모델이다. 비교는 사실만 적었다.
-> 회사를 정하는 가장 좋은 방법은 **같은 평가 세트(2부)를 두 회사 모델로 돌려 보고 숫자로 고르는 것**이다.
-> 가격은 1M 토큰당 표준 요금이다. 바뀔 수 있으니 결제 전에 공식 페이지에서 다시 확인한다.
+> 이 지시서를 쓴 Claude는 Anthropic이 만든 모델이다. 비교표에는 사실만 적었다.
+> **결정 (2026-11-22, 임솔)**
+> - 개발 중에는 Gemini 무료 등급을 쓴다.
+> - 실제 트랙 데이터가 들어온 뒤 2부 평가 세트로 세 회사의 소형·중간 모델을 비교해 정한다.
+> - 결제는 임솔이 한다. 유료로 바꿀 때는 월 사용 한도를 먼저 걸어 둔다.
+>
+> 가격은 1M 토큰당 표준 요금(USD)이다. 바뀔 수 있으니 결제 전에 공식 페이지에서 다시 확인한다.
 
-### 가격 (같은 등급끼리)
+### 1. 가격
 
-| 등급 | Anthropic | 입력 / 출력 | OpenAI | 입력 / 출력 |
-|---|---|---|---|---|
-| 최상위 | Claude Opus 5.5 (`claude-opus-5-5`) | $4.00 / $20.00 | gpt-6.2-astra | $8.00 / $40.00 |
-| 중간 | Claude Sonnet 5.5 (`claude-sonnet-5-5`) | $2.00 / $10.00 | gpt-6.2-sol | $2.00 / $10.00 |
-| 중간 아래 | — | — | gpt-6.1-terra | $1.00 / $5.00 |
-| 소형 | Claude Haiku 5.5 (`claude-haiku-5-5`) | $0.10 / $0.50 (프롬프트 100K 이하) | gpt-6-luna | $0.10 / $0.50 |
-| 반복 입력 할인 | 캐시 읽기: Opus·Fable $0.20, Sonnet 5.5 $0.10 | | 캐시된 입력: sol $0.10, luna $0.01 | |
+| 등급 | Google Gemini | Anthropic | OpenAI |
+|---|---|---|---|
+| **무료 등급** | **있음.** Flash 계열 일부(예: Gemini 3.8 Flash, 3.5 Flash-Lite)는 입력·출력 무료. 상위 모델(Gemini 4 Argon 등)은 무료 없음 | 없음 (확인된 무료 크레딧 없음) | 없음. 계정에 무료 크레딧이 있을 수는 있다고 안내되지만 금액·조건은 나와 있지 않음 |
+| 소형 (유료) | Gemini 3.5 Flash-Lite: $0.30 / $2.50 | Claude Haiku 5.5: $0.10 / $0.50 (프롬프트 100K 이하) | gpt-6-luna: $0.10 / $0.50 |
+| 중간 (유료) | Gemini 3.8 Flash: $0.75 / $3.75. **2027-01-01부터 $1.50 / $7.50** (공모전 기간 중 두 배로 오름) | Claude Sonnet 5.5: $2.00 / $10.00 | gpt-6.2-sol: $2.00 / $10.00 |
+| 최상위 (참고) | Gemini 4 Argon: 무료 없음, 2026-12-01에 입력 가격 인상 예정 | Claude Opus 5.5: $4.00 / $20.00 | gpt-6.2-astra: $8.00 / $40.00 |
 
-### 1회 호출 예상 비용 (대략)
-- 가정: 입력 약 8,000토큰(후보 목록 + 공고), 출력 약 1,500토큰(내부 추론 포함). 한국어 토큰 수는 회사마다 달라 실제로 재 봐야 한다.
-- 중간 등급(Sonnet 5.5 또는 gpt-6.2-sol): 약 $0.03
-- 소형(Haiku 5.5 또는 gpt-6-luna): 약 $0.002
-- 2부 평가 1회(87호출): 중간 약 $2.6, 소형 약 $0.2
-- 시연·사용성 테스트로 500회 쓰면: 중간 약 $15, 소형 약 $1
+**1회 호출 예상 비용 (대략)**
+- 가정: 입력 약 8,000토큰, 출력 약 1,500토큰. 한국어 토큰 수는 회사마다 달라서 2부에서 실제로 잰다.
 
-### 기능
+| 모델 | 1회 | 평가 1회 (87호출) | 500회 |
+|---|---|---|---|
+| Gemini 무료 등급 | $0 (호출 한도 안에서) | $0 | $0 |
+| Gemini 3.8 Flash (유료, 2026년 가격) | 약 $0.012 | 약 $1.0 | 약 $6 |
+| Gemini 3.5 Flash-Lite (유료) | 약 $0.006 | 약 $0.5 | 약 $3 |
+| Sonnet 5.5 / gpt-6.2-sol | 약 $0.03 | 약 $2.6 | 약 $15 |
+| Haiku 5.5 / gpt-6-luna | 약 $0.002 | 약 $0.2 | 약 $1 |
 
-| 항목 | Anthropic | OpenAI |
-|---|---|---|
-| TypeScript 공식 SDK | `@anthropic-ai/sdk` | `openai` |
-| JSON 스키마 강제 출력 | 지원 (`output_config.format`, SDK에 zod 검증 도우미) | 지원 (Structured Outputs). 세부 사용법은 공식 문서에서 확인 필요 |
-| 반복되는 앞부분 캐시 | 요청에 `cache_control` 을 표시해서 사용. 후보 목록이 매번 같으면 비용이 줄어듦 | 자동 캐시. 위 '캐시된 입력' 요금 적용 |
-| 내부 추론(생각) 토큰 | Opus 5.5는 끌 수 없고 effort로 조절. 출력 요금으로 과금 | 추론 모델은 추론 토큰을 출력 요금으로 과금 |
-| 거절 처리 | 응답의 `stop_reason: "refusal"` 로 알 수 있음 → 5번에서 502 처리 | 거절 응답 형식은 공식 문서에서 확인 필요 |
+- 2부의 6조합 비교 평가를 한 번씩 돌리면 대략 $5 안쪽이다. Gemini 2조합은 무료 등급으로 돌리면 $0이다.
 
-### 아직 확인하지 않은 것 (결정 전에 확인 권장)
-- 한국어 공고에서의 실제 품질 → 2부 평가로 확인
-- 각 회사의 데이터 보관·학습 사용 정책, 학생 무료 크레딧 유무
-- 팀원 결제 수단 (해외 결제 카드 필요 여부)
+### 2. 데이터 보관·학습 사용
 
-출처
+| | Google Gemini | Anthropic | OpenAI |
+|---|---|---|---|
+| 입력이 학습·제품 개선에 쓰이나 | **무료 등급: 쓰일 수 있음** ("Used to improve our products: Yes"). 유료 등급: 쓰지 않음 | 쓰지 않음 ("Anthropic may not train models on Customer Content") | 기본적으로 쓰지 않음 (직접 동의한 경우만) |
+| 기본 보관 기간 | 이번에 확인하지 못함 | 입력·출력을 30일 안에 삭제. 정책 위반으로 표시되면 최대 2년 | 남용 감시 기록을 최대 30일 보관. 일부 기능(파일 등)은 지울 때까지 |
+| 주의 | 무료로 보낸 데이터는 나중에 유료로 바꿔도 지울 수 없을 수 있다는 커뮤니티 답변이 있음 (공식 문서 아님) | — | — |
+
+→ **무료 등급을 쓰는 동안 개인정보 가리기(1부 2번)는 반드시 적용한다.** 사용성 테스트 때 실제 학생 입력을 무료 등급으로 보낼지는 '남은 결정' 2.
+
+### 3. 결제·카드
+
+| | Google Gemini | Anthropic | OpenAI |
+|---|---|---|---|
+| 무료로 시작할 때 카드 필요 | 필요 없음 (결제 계정 연결 없이 무료 등급 사용) | 무료 등급 없음 | 무료 등급 없음 |
+| 유료 방식 | 결제 계정 연결 + 선불 크레딧 **최소 $5** (최대 $5,000, 12개월 뒤 만료) | 선불 크레딧 (최소 금액·카드 조건은 안내 페이지에 없음, 1년 뒤 만료, 환불 불가) | 선불 크레딧 **최소 $5** (기본 $10, 결제 수단 등록 필요, 1년 뒤 만료) |
+| 한국에서 사용 | 가능 (사용 가능 국가 목록에 South Korea) | 이번에 확인하지 않음 | 이번에 확인하지 않음 |
+| 월 사용 한도 | 결제 전에 각 회사 콘솔에서 한도 설정 방법을 확인한다 (임솔). 선불 크레딧은 충전한 만큼만 쓰이지만, 자동 충전은 끄거나 상한을 둔다 | 〃 (자동 충전 기능 있음) | 〃 (설정할 때 자동 충전이 기본으로 켜짐) |
+
+### 4. 기능
+
+| | Google Gemini | Anthropic | OpenAI |
+|---|---|---|---|
+| TypeScript 공식 SDK | `@google/genai` | `@anthropic-ai/sdk` | `openai` |
+| JSON 스키마 강제 출력 | 지원 (JSON Schema 지정, zod로 스키마 정의 가능) | 지원 (`output_config.format`, SDK에 zod 검증 도우미) | 지원 (Structured Outputs) |
+| 반복 입력 할인 | 유료 등급 캐시 요금 있음 (예: 3.5 Flash-Lite $0.03) | 요청에 캐시 표시, 캐시 읽기 할인 | 자동 캐시, '캐시된 입력' 요금 |
+| 무료 등급 호출 한도 | 모델별로 다르고 보장되지 않음 ("Specified rate limits are not guaranteed"). 정확한 숫자는 AI Studio 화면에서 확인 | — | — |
+
+### 5. 한국어 품질
+- 세 회사 모두 공개 자료로는 판단하지 않는다. **2부 평가 세트(한국어 공고 중심)로 잰다.**
+
+### 아직 확인하지 않은 것
+- Gemini 무료 등급의 정확한 분당·하루 호출 한도 (AI Studio의 rate limit 화면)
+- Gemini의 기본 보관 기간
+- Anthropic·OpenAI의 한국 결제 가능 여부와 카드 조건 (해외 결제 카드)
+- 학생용 무료 크레딧 프로그램 유무 (세 회사 모두)
+
+### 출처
+- Gemini 가격·학습 사용 여부: https://ai.google.dev/gemini-api/docs/pricing
+- Gemini 호출 한도: https://ai.google.dev/gemini-api/docs/rate-limits
+- Gemini 결제: https://ai.google.dev/gemini-api/docs/billing
+- Gemini 사용 가능 국가: https://ai.google.dev/gemini-api/docs/available-regions
+- Gemini 구조화 출력·SDK: https://aistudio.google.com/docs/structured-output , https://aistudio.google.com/docs/libraries
+- Gemini 무료 등급 데이터 관련 커뮤니티 답변 (공식 문서 아님): https://discuss.ai.google.dev/t/data-deletion-request-free-tier-data-processed-before-billing-was-enabled/180514
 - Anthropic 모델·가격: Claude API 공식 자료 (2026-11-03 기준 표)
-- OpenAI 가격: https://developers.openai.com/api/docs/pricing (2026-11-22 확인)
+- Anthropic 보관 기간: https://privacy.claude.com/en/articles/7996866-how-long-do-you-store-my-organization-s-data
+- Anthropic 학습 사용: https://www.anthropic.com/legal/commercial-terms
+- Anthropic 결제: https://support.claude.com/en/articles/8977456-how-do-i-pay-for-my-api-usage
+- OpenAI 가격: https://developers.openai.com/api/docs/pricing
+- OpenAI 데이터: https://developers.openai.com/api/docs/guides/your-data
+- OpenAI 결제: https://help.openai.com/en/articles/8264644-what-is-prepaid-billing
 
 ---
 
