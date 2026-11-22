@@ -32,3 +32,4 @@
 | 2026-11-22 | main 보호 규칙의 필요한 승인 수를 1 → 0으로 바꿈. Code Owner 리뷰 필수, 새 push 시 승인 무효화, force push 금지, 삭제 금지는 유지 (임솔) | 셋이 작업하며 승인 대기로 막히는 일을 줄이기 위해. 규칙 데이터·AGENTS.md·CLAUDE.md·.github 변경은 Code Owner 리뷰로 계속 보호 |
 | 2026-11-22 | CI(GitHub Actions)를 만들어 `check` 작업을 main의 필수 상태 검사로 건다 (T-018) | 승인 수가 0이 된 뒤에도 lint·typecheck·test·build 통과를 자동으로 보장하기 위해 |
 | 2026-11-22 | AGENTS.md 4-4의 "리뷰 1명 이상 승인 → merge"는 지금 고치지 않고, 다음에 AGENTS.md를 고칠 일이 생기면 그 PR에서 같이 고친다 (임솔). TEAM_GUIDE는 바로 고침 | AGENTS.md는 Code Owner 파일이라 문구 하나만 고치는 PR을 따로 만들지 않기 위해. 그때까지는 실제 규칙(승인 수 0, Code Owner 경로는 리뷰 필요)이 우선 |
+| 2026-11-22 | `npm run lint` 는 ESLint 경고가 하나라도 있으면 실패하게 한다 (`--max-warnings 0`, T-019) (임솔) | 기본 설정에서 쓰지 않는 변수 등은 경고라 CI를 통과함. AI가 만든 코드에 남는 찌꺼기를 막기 위해. 설정 파일 대신 스크립트 옵션으로 해서 앞으로 생기는 경고도 모두 막음 |
