@@ -31,3 +31,4 @@
 | 2026-11-22 | AI 회사 비교 비용은 2027-01-01 이후 가격 기준으로 계산한다 | 경진대회(2027-01-11)에 실제로 쓰는 기간의 가격. Gemini 3.8 Flash는 1월에 두 배로 오른다 |
 | 2026-11-22 | main 보호 규칙의 필요한 승인 수를 1 → 0으로 바꿈. Code Owner 리뷰 필수, 새 push 시 승인 무효화, force push 금지, 삭제 금지는 유지 (임솔) | 셋이 작업하며 승인 대기로 막히는 일을 줄이기 위해. 규칙 데이터·AGENTS.md·CLAUDE.md·.github 변경은 Code Owner 리뷰로 계속 보호 |
 | 2026-11-22 | CI(GitHub Actions)를 만들어 `check` 작업을 main의 필수 상태 검사로 건다 (T-018) | 승인 수가 0이 된 뒤에도 lint·typecheck·test·build 통과를 자동으로 보장하기 위해 |
+| 2026-11-22 | AGENTS.md 4-4의 "리뷰 1명 이상 승인 → merge"는 지금 고치지 않고, 다음에 AGENTS.md를 고칠 일이 생기면 그 PR에서 같이 고친다 (임솔). TEAM_GUIDE는 바로 고침 | AGENTS.md는 Code Owner 파일이라 문구 하나만 고치는 PR을 따로 만들지 않기 위해. 그때까지는 실제 규칙(승인 수 0, Code Owner 경로는 리뷰 필요)이 우선 |

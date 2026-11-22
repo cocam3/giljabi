@@ -18,7 +18,7 @@
    ```
 5. `.github/CODEOWNERS` 의 `@기획담당아이디` 를 실제 GitHub 아이디로 바꿔서 커밋·push (다음 단계보다 먼저)
 6. **main 보호 규칙** (Settings → Rules → Rulesets → New branch ruleset, 대상 `main`)
-   - Require a pull request before merging, 승인 1명
+   - Require a pull request before merging, 필요한 승인 수 0 (2026-11-22에 1 → 0으로 변경. Code Owner 경로는 아래 규칙으로 계속 리뷰 필요)
    - Require review from Code Owners (data/rules 보호용)
    - Block force pushes
    - Restrict deletions
@@ -38,7 +38,7 @@
 5. 직접 실행해서 눈으로 확인   npm run dev
 6. 커밋 & push               git add . && git commit -m "feat: ..." && git push -u origin 브랜치
 7. GitHub에서 PR 열기 → 템플릿 체크리스트 채우기
-8. Claude 리뷰 + 팀원 1명 승인 → merge
+8. Claude 리뷰 → merge      (data/rules·AGENTS.md·CLAUDE.md·.github 를 바꾼 PR은 Code Owner 승인 필요)
 ```
 
 브랜치 이름: `feat/` 기능, `fix/` 버그, `docs/` 문서, `data/` 규칙 데이터 수정
