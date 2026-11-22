@@ -142,6 +142,32 @@ private/data-draft/
   - 표 하나에 5행(tracks → courses → requirements → micro_degrees → competencies)이 모두 들어 있고, 인용문이 표 아래에 보이면 된다.
 - **승인**: 작성자인 kyu0lee는 자기 PR을 승인할 수 없다. 그래서 다른 Code Owner인 임솔이 승인한다.
 
+### 6-2. kyu0lee가 확인하고 제안할 것 — 한 학기 최대 신청 학점 (2026-11-22 범위 추가)
+> 이것도 Codex 작업이 아니다. 수집 스크립트 대상이 아니라 kyu0lee가 학교 페이지를 직접 읽고 정리한다.
+
+- **왜 필요한가**
+  - 홈 '지금 할 일' 카드의 ④ **졸업 위험**("남은 학기에 다 넣어도 못 채움")을 판단하려면, 한 학기에 최대 몇 학점까지 신청할 수 있는지 알아야 한다. (`docs/SCREENS.md` 4장, T-020)
+  - 지금 CSV 5종에는 담을 곳이 없다.
+- **확인할 것** (출처 URL·확인 날짜와 함께)
+  1. 정규 학기 최대 신청 학점, 계절 학기 최대 학점
+  2. 학년, 입학년도, 주야간, 트랙에 따라 다른지
+  3. 예외: 직전 학기 성적이 좋으면 더 신청 가능, 졸업 학기 특례, 복수전공 추가 학점 같은 것
+  4. 최소 신청 학점이 있는지 (참고용)
+- **담을 곳 제안**: 확인한 규정 모양을 보고 아래 둘 중 하나를 골라 제안한다. 다른 모양이 더 맞으면 새로 제안해도 된다.
+
+  | 안 | 방법 | 맞는 경우 |
+  |---|---|---|
+  | A | `requirements.csv` 에 `type = 학기최대학점` 행 추가. `value` 는 학점 숫자, `applies_from`·`applies_until`·`applies_track` 으로 적용 범위, 예외는 `note` 에 문장으로 | 규정이 단순하다 (학점 하나 + 적용 범위) |
+  | B | 새 파일 `semester_limits.csv` 를 만든다. 열(제안): `limit_id, applies_from, applies_until, applies_track, day_night, term(정규/계절), max_credits, condition, source, as_of`. 예외는 행을 나눠 `condition` 에 적는다 (예: "직전 학기 평점 ○ 이상") | 학년·성적·학기 종류에 따라 값이 여러 개다 |
+
+  - A는 파일을 늘리지 않지만 `type` 허용값에 새 값을 넣어야 한다. B는 파일이 하나 늘지만 예외를 행으로 나눌 수 있다.
+  - **어느 쪽이든 T-002 스키마와 `data/rules/README.md` 를 바꿔야 한다.** 그래서 kyu0lee는 제안만 하고, 임솔이 정한 뒤 스키마 변경 작업지시서를 따로 만든다. 정하기 전에는 CSV에 값을 넣지 않는다.
+- **제안하는 방법**: 첫 데이터 PR의 설명 '리뷰어가 봐 줬으면 하는 곳'에 다음을 적는다.
+  - 확인한 규정 요약과 출처 URL
+  - 고른 안(A·B·기타)과 그 이유
+  - 그 안으로 쓴 예시 행 2~3줄: 실제 규정 값으로 쓰되, 아직 파일에는 넣지 않는다
+- **규정을 찾지 못하면**: "찾지 못함"과 찾아본 페이지 목록을 적는다. 숫자를 짐작해서 넣지 않는다. 그동안 카드 ④는 건너뛴다.
+
 ### 7. 테스트 (네트워크 없이)
 - `tests/data-pipeline/parse.test.ts` — `tests/fixtures/data-pipeline/*.fake.html` (직접 만든 가짜 HTML, 가짜 과목명)
   - 정상 표 → `courses` 행. `source`·`as_of` 가 채워진다.
@@ -181,6 +207,7 @@ private/data-draft/
 ## 필요한 데이터
 - **데이터 필요 (kyu0lee)**: `targets.csv` 의 5개 트랙과 각 트랙의 교육과정·졸업요건 페이지 URL. 트랙 이름·`track_id`·`day_night`·`status` 도 kyu0lee가 확인해 채운다.
 - **데이터 필요 (kyu0lee)**: 체크포인트에서 표 열 대응과 이수구분 대응표 확인
+- **데이터 필요 (kyu0lee)**: 한 학기 최대 신청 학점 규정 확인 + 담을 열·파일 제안 (6-2, 첫 데이터 PR 설명에)
 - 이번 범위가 아닌 것은 손으로 채운다: `micro_degrees.csv`, `competencies.csv`, `requirements.csv` 의 최종 행
 
 ## 완료 조건
