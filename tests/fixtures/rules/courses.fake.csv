@@ -1,0 +1,5 @@
+# 가짜 테스트 데이터 — 실제 한성대학교 데이터 아님
+track_id,year,semester,category,course_code,course_name,credits,source,as_of
+FAKE-T01,1,1,전기,FAKE101,가짜과목1,0,https://example.com/fake,2000-01-01
+FAKE-T02,2,2,전필,FAKE102,"가짜과목2, 실습",1,https://example.com/fake,2000-01-01
+FAKE-T03,4,1,전선,FAKE103,가짜과목3,2,https://example.com/fake,2000-01-01

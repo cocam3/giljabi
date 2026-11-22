@@ -1,0 +1,5 @@
+# 가짜 테스트 데이터 — 실제 한성대학교 데이터 아님
+md_id,name,type,needs_application,course_name,credits,source,as_of
+FAKE-MD01,가짜마이크로A,가짜자유유형,false,가짜과목1,0,https://example.com/fake,2000-01-01
+FAKE-MD01,가짜마이크로A,가짜자유유형,false,가짜과목2,1,https://example.com/fake,2000-01-01
+FAKE-MD02,가짜마이크로B,또다른가짜유형,TRUE,가짜과목3,2,https://example.com/fake,2000-01-01

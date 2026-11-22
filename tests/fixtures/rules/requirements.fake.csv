@@ -1,0 +1,5 @@
+# 가짜 테스트 데이터 — 실제 한성대학교 데이터 아님
+rule_id,applies_from,applies_until,applies_track,type,value,note,source,as_of
+FAKE-R01,2000,,ALL,비학점,가짜확인 항목을 직접 체크합니다,,https://example.com/fake,2000-01-01
+FAKE-R02,2000,2000,FAKE-T01,전공,1,가짜 기준,https://example.com/fake,2000-01-01
+FAKE-R03,2000,2001,FAKE-T02,총학점,2,,https://example.com/fake,2000-01-01

@@ -1,0 +1,5 @@
+# 가짜 테스트 데이터 — 실제 한성대학교 데이터 아님
+track_id,competency,career,certificate,source,as_of
+FAKE-T01,가짜역량1,가짜진로1,,https://example.com/fake,2000-01-01
+FAKE-T02,가짜역량2,가짜진로2,가짜자격2,https://example.com/fake,2000-01-01
+FAKE-T03,가짜역량3,가짜진로3,,https://example.com/fake,2000-01-01

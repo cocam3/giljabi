@@ -1,0 +1,5 @@
+# 가짜 테스트 데이터 — 실제 한성대학교 데이터 아님
+track_id,name,college,day_night,status,source,as_of
+FAKE-T01,가짜트랙A,가짜대학,주간,운영,https://example.com/fake,2000-01-01
+FAKE-T02,가짜트랙B,가짜대학,야간,운영,https://example.com/fake,2000-01-01
+FAKE-T03,가짜트랙C,가짜대학,주간,모집중지,https://example.com/fake,2000-01-01
