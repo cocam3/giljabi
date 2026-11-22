@@ -29,9 +29,20 @@ export function parseCsv(file: RuleFileName, input: string): {
   validHeader: boolean;
 } {
   const source = input.replace(/^\uFEFF/, "");
+  const replacementIndex = source.indexOf("\uFFFD");
+  if (replacementIndex !== -1) {
+    return {
+      rows: [], validHeader: false,
+      issues: [{ file, line: source.slice(0, replacementIndex).split(/\r\n|\n|\r/).length,
+        column: "파일", message: "엑셀에서 'CSV UTF-8'로 다시 저장하세요" }],
+    };
+  }
   const issues: RulesValidationIssue[] = [];
   const lines: number[] = [];
+  const emptyRows = new Set<number>();
   let headers: string[] = [];
+  let foundHeader = false;
+  let headerStart = 0;
   let cursor = 0;
   let line = 1;
 
@@ -49,8 +60,16 @@ export function parseCsv(file: RuleFileName, input: string): {
         skipped++;
       }
       const recordLine = line + skipped;
-      lines.push(recordLine);
-      if (lines.length === 1) headers = result.data.map((value) => value.trim());
+      const empty = result.errors.length === 0 && result.data.every((value) => value.trim() === "");
+      if (!foundHeader && !empty) {
+        foundHeader = true;
+        headerStart = cursor;
+        headers = result.data.map((value) => value.trim());
+      }
+      if (foundHeader) {
+        lines.push(recordLine);
+        if (empty) emptyRows.add(lines.length - 2);
+      }
       for (const error of result.errors) {
         issues.push({ file, line: recordLine, column: "CSV", message:
           error.code === "MissingQuotes" ? "닫히지 않은 따옴표가 있습니다" : "CSV 따옴표 형식이 올바르지 않습니다" });
@@ -75,7 +94,7 @@ export function parseCsv(file: RuleFileName, input: string): {
   // 열 구조가 잘못되면 값의 열을 신뢰할 수 없으므로 행 검사를 하지 않는다.
   if (headerIssues.length > 0) return { rows: [], issues: [...issues, ...headerIssues], validHeader: false };
 
-  const result = Papa.parse<Record<string, string>>(source, {
+  const result = Papa.parse<Record<string, string>>(source.slice(headerStart), {
     delimiter: ",",
     header: true,
     skipEmptyLines: true,
@@ -87,12 +106,13 @@ export function parseCsv(file: RuleFileName, input: string): {
   for (const error of result.errors) {
     if (error.type !== "FieldMismatch") continue; // 따옴표 오류는 위에서 실제 줄 번호와 함께 수집했다.
     const row = error.row ?? 0;
+    if (emptyRows.has(row)) continue;
     invalidRows.add(row);
     issues.push({ file, line: lines[row + 1] ?? headerLine, column: "CSV", message:
       error.code === "TooManyFields" ? "열 이름보다 값의 개수가 많습니다" : "열 이름보다 값의 개수가 적습니다" });
   }
   return {
-    rows: result.data.flatMap((data, index) => invalidRows.has(index)
+    rows: result.data.flatMap((data, index) => invalidRows.has(index) || emptyRows.has(index)
       ? [] : [{ data, line: lines[index + 1] ?? headerLine }]),
     issues,
     validHeader: true,

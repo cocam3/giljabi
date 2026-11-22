@@ -23,7 +23,7 @@ const requiredText = text.min(1, "필수 값이 비어 있습니다");
 const optionalText = text.transform((value) => value === "" ? undefined : value);
 const nonnegativeNumber = text
   .refine(
-    (value) => /^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(value)
+    (value) => /^\d+(?:\.\d+)?$/.test(value)
       && Number.isFinite(Number(value)) && Number(value) >= 0,
     "0 이상의 숫자여야 합니다",
   )

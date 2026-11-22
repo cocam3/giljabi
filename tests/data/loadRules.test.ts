@@ -175,6 +175,43 @@ describe("스키마·교차 참조 오류", () => {
 });
 
 describe("CSV 구조·물리 줄 번호·파일 오류", () => {
+  test.each(["\n", "\r\n", "\r"])("모든 칸이 빈 행은 헤더 앞과 데이터 사이에서도 건너뛴다 (%j)", (newline) => {
+    const texts = Object.fromEntries(ruleFileNames.map((file) => {
+      const lines = fixtureTexts[file].trimEnd().split(/\r\n|\n|\r/);
+      return [file, [",,,,,,,,", ...lines.flatMap((line) => [line, ',"",  ,']), '"\n",,', "   "].join(newline)];
+    })) as Record<RuleFileName, string>;
+    expect(parseRules(texts)).toEqual(parseRules(fixtureTexts));
+
+    texts["courses.csv"] += newline + "FAKE-T01,1,1,전기,FAKE104,가짜과목4,3학점,https://example.com/fake,2000-01-01";
+    expect(getError(texts).issues).toEqual([{
+      file: "courses.csv", line: texts["courses.csv"].split(/\r\n|\n|\r/).length, column: "credits",
+      message: '0 이상의 숫자여야 합니다 (입력값: "3학점")',
+    }]);
+  });
+
+  test("헤더 뒤에 모든 칸이 빈 행만 있으면 빈 배열을 반환한다", () => {
+    const texts = Object.fromEntries(ruleFileNames.map((file) => [
+      file, `${ruleColumns[file].join(",")}\n,,,,,,,,\n,,\n`,
+    ])) as Record<RuleFileName, string>;
+    for (const rows of Object.values(parseRules(texts))) expect(rows).toEqual([]);
+  });
+
+  test.each(ruleFileNames)("%s에 U+FFFD가 여러 개 있으면 다른 오류 없이 저장 안내를 한 번만 낸다", (file) => {
+    const corrupted = '# 가짜 주석\r\n\uFFFD,잘못된헤더\r\n"\uFFFD';
+    expect(getError({ ...fixtureTexts, [file]: corrupted }).issues).toEqual([{
+      file, line: 2, column: "파일", message: "엑셀에서 'CSV UTF-8'로 다시 저장하세요",
+    }]);
+  });
+
+  test("깨진 글자가 있는 파일 외의 정상적으로 읽힌 파일 오류는 계속 보고한다", () => {
+    const texts = change("courses.csv", 0, "credits", "3학점");
+    texts["tracks.csv"] += Buffer.from([0xff, 0xfe]).toString("utf8");
+    const issues = getError(texts).issues;
+    expect(issues).toHaveLength(2);
+    expect(issues[0]).toMatchObject({ file: "tracks.csv", column: "파일", message: "엑셀에서 'CSV UTF-8'로 다시 저장하세요" });
+    expect(issues[1]).toMatchObject({ file: "courses.csv", line: 3, column: "credits" });
+  });
+
   test("빠진 열과 모르는 열을 함께 보고한다", () => {
     const texts = { ...fixtureTexts, "tracks.csv": fixtureTexts["tracks.csv"].replace("college", "collage") };
     expect(getError(texts).issues).toEqual([
@@ -248,5 +285,21 @@ describe("CSV 구조·물리 줄 번호·파일 오류", () => {
       for (const path of createdFiles) await unlink(path);
       await rmdir(dir);
     }
+  });
+});
+
+describe.each([
+  ["courses.csv", 0, "credits", "courses"],
+  ["micro_degrees.csv", 0, "credits", "micro_degrees"],
+  ["requirements.csv", 1, "value", "requirements"],
+] as const)("%s의 %s행 %s 숫자 형식", (file, row, column, key) => {
+  test.each(["0", "3", "0.5", " 0.5 "])("일반 숫자 %s를 허용한다", (value) => {
+    expect(parseRules(change(file, row, column, value))[key][row]).toMatchObject({ [column]: Number(value) });
+  });
+
+  test.each(["1e3", "+3", ".5", "Infinity", "3.", "-0", "0x10"])("일반 숫자가 아닌 %s를 거부한다", (value) => {
+    expect(getError(change(file, row, column, value)).issues).toEqual([{
+      file, line: row + 3, column, message: `0 이상의 숫자여야 합니다 (입력값: "${value}")`,
+    }]);
   });
 });
