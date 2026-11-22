@@ -13,6 +13,8 @@
 3. `docs/PROMPTS.md` — Claude·Codex에 그대로 쓰는 프롬프트
 
 ## 실행
+Node 22 이상 필요
+
 ```
 npm install
 cp .env.example .env.local   # 값 채우기

@@ -29,3 +29,23 @@ Thumbs.db
 # 개인 테스트 자료 (실제 성적표 등)
 private/
 *.secret.*
+
+/node_modules
+/.pnp
+.pnp.*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/versions
+/coverage
+/.next/
+/out/
+/build
+*.pem
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.env*
+*.tsbuildinfo
+next-env.d.ts
