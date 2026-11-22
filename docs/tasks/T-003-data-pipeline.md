@@ -118,6 +118,29 @@ private/data-draft/
 5. 이미지·PDF 부분은 원본을 보고 손으로 채우기
 6. 확인한 CSV를 `data/rules/` 로 직접 복사하기
 7. `data/` 브랜치에서 PR 열기 (Code Owner 승인 필요)
+   - **첫 데이터 PR에서만** 아래 6-1의 README 표 수정을 같은 PR에 함께 넣는다.
+
+### 6-1. kyu0lee가 첫 데이터 PR에서 함께 고칠 것 — `data/rules/README.md` 표 끊김
+> Codex 작업이 아니다. `data/rules/` 는 AI 수정 금지이므로 kyu0lee가 직접 고친다. `scripts/data/README.md` 에는 넣지 않는다. (한 번만 하는 일)
+
+- **문제**
+  - '파일 목록' 표의 `micro_degrees.csv` 행(18번째 줄) 바로 뒤에 빈 줄(19번째 줄)과 `> 2026-11-22 변경: …` 인용문(20번째 줄)이 끼어 있다.
+  - 그래서 표가 거기서 끊기고, `competencies.csv` 행(21번째 줄)이 표 밖으로 밀려나 글자로 보인다.
+  - 원인: PR #3에서 Claude가 인용문을 잘못된 위치에 넣었다.
+- **고치는 방법**
+  - 19번째 줄(빈 줄)과 20번째 줄(인용문)을 잘라 내서 `competencies.csv` 행 **아래**에 붙인다.
+  - 표 마지막 행과 인용문 사이에는 빈 줄을 하나 둔다. 글자는 하나도 바꾸지 않는다.
+  - 고친 뒤 순서
+    ```
+    | `micro_degrees.csv` | … |
+    | `competencies.csv` | … |
+    (빈 줄)
+    > 2026-11-22 변경: …
+    ```
+- **확인**
+  - PR의 Files changed에서 `data/rules/README.md` 의 `…` 메뉴 → View file로 들어간다.
+  - 표 하나에 5행(tracks → courses → requirements → micro_degrees → competencies)이 모두 들어 있고, 인용문이 표 아래에 보이면 된다.
+- **승인**: 작성자인 kyu0lee는 자기 PR을 승인할 수 없다. 그래서 다른 Code Owner인 임솔이 승인한다.
 
 ### 7. 테스트 (네트워크 없이)
 - `tests/data-pipeline/parse.test.ts` — `tests/fixtures/data-pipeline/*.fake.html` (직접 만든 가짜 HTML, 가짜 과목명)
