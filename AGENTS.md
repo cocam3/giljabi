@@ -129,3 +129,13 @@ npm run build      # 빌드
 - TypeScript strict. 함수와 변수 이름은 영어, 화면 문구와 주석은 한국어 가능.
 - 컴포넌트는 함수형, 파일 하나에 컴포넌트 하나.
 - 화면 문구는 학생이 바로 이해하는 쉬운 말로 쓴다. 학사 용어는 처음 나올 때 풀어 쓴다.
+
+<!-- BEGIN:nextjs-agent-rules -->
+
+## This is NOT the Next.js you know
+
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
+<!-- END:nextjs-agent-rules -->
