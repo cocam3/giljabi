@@ -26,6 +26,7 @@
 | T-002 | 규칙 데이터 스키마·로더 (CSV 5종, 가짜 데이터로 테스트) | 공통 | T-001 | 작성됨 |
 | T-003 | 학교 데이터 수집·검증 스크립트 (scripts/data, 초안은 private/data-draft) — 담당 kyu0lee | 데이터 | T-002 | 작성됨 |
 | T-018 | CI: PR마다 lint·typecheck·test·build 자동 검사 (GitHub Actions), merge 후 필수 상태 검사로 등록. 번호는 다음 빈 번호 | 공통 | T-001 | 작성됨 (초안) |
+| T-019 | lint 경고도 실패로 처리: `lint` 스크립트에 `--max-warnings 0` (CI에도 적용). 번호는 다음 빈 번호 | 공통 | T-001 (T-018 merge 후면 CI까지 적용) | 작성됨 |
 | T-004 | 학생 이수 내역 저장소 (localStorage 읽기·쓰기, 타입, 손상된 값 처리) | 공통 | T-001 | 초안 |
 
 - T-003과 T-004는 서로 관계가 없어 **동시에 진행할 수 있다.**
