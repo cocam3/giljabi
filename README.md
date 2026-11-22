@@ -13,6 +13,8 @@
 3. `docs/PROMPTS.md` — Claude·Codex에 그대로 쓰는 프롬프트
 
 ## 실행
+Node 24 LTS 권장 (22.12 이상의 22.x, 26 이상도 가능 · 23·25는 Vitest가 지원하지 않음)
+
 ```
 npm install
 cp .env.example .env.local   # 값 채우기
