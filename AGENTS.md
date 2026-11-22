@@ -51,9 +51,12 @@
   /data              데이터 로더 (data/ 폴더를 읽어 zod로 검증)
 /data
   /rules             학교 규칙 원본 (CSV) ← 사람이 직접 관리
+/scripts
+  /data              데이터 수집·검증 스크립트 (학교 페이지 → CSV 초안, 초안 검사)
 /docs
   /tasks             작업지시서 (Claude가 작성, Codex가 수행)
 /tests               테스트
+/private             커밋하지 않는 개인 작업 폴더 (.gitignore). 수집 저장본·CSV 초안
 ```
 
 ---
@@ -66,6 +69,7 @@
 - `data/rules/` 파일은 기획 담당이 관리한다. AI는 이 폴더를 **수정·삭제하지 않는다.** 데이터가 틀려 보이면 PR 설명이나 이슈로 알린다.
 - 모든 규칙 데이터 행에는 `source`(출처 URL)와 `as_of`(기준일) 열이 있어야 한다.
 - 규칙 엔진(`lib/rules`)은 같은 입력이면 항상 같은 결과를 내는 순수 함수로 짠다. 이 안에서 AI를 호출하지 않는다.
+- 수집 스크립트(`scripts/data`)의 결과는 `private/data-draft/` 에만 쓴다. `data/rules/` 에는 **사람이 확인한 뒤 직접** 옮긴다. 스크립트가 `data/rules/` 에 쓰는 코드는 만들지 않는다.
 
 ### 4-2. AI(LLM) 기능과 보안
 - AI는 `app/api` 의 서버 코드에서만 호출한다. API 키는 환경변수(`.env.local`)로만 쓰고 코드·로그·커밋에 넣지 않는다.
