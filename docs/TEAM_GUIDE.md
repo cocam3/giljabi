@@ -41,6 +41,21 @@
 8. Claude 리뷰 → merge      (data/rules·AGENTS.md·CLAUDE.md·.github 를 바꾼 PR은 Code Owner 승인 필요)
 ```
 
+### 리뷰 순환 (2026-11-26)
+
+PR을 열면 아래 사람을 Reviewer로 지정한다. Claude 리뷰(8단계)와 별도로, 사람 한 명이 꼭 본다.
+
+| PR 작성자 | 리뷰어 |
+|---|---|
+| 2junewoo | kyu0lee |
+| kyu0lee | 임솔 (sol0404) |
+| 임솔 (sol0404) | 2junewoo |
+
+- 리뷰어는 하루 안에 보고, 늦어지면 카톡으로 알린다.
+- **Code Owner 경로**(`data/rules/`, `AGENTS.md`, `CLAUDE.md`, `.github/`)를 바꾼 PR은 위 리뷰어와 별도로 Code Owner(sol0404 또는 kyu0lee) 승인이 있어야 merge된다. 임솔이 연 PR이면 kyu0lee가 승인한다 (작성자는 자기 PR을 승인할 수 없음).
+- 남의 담당 폴더를 고친 PR은 그 폴더 담당도 리뷰어로 추가한다 (`docs/tasks/ROADMAP.md` 담당 폴더 표).
+- main 보호 규칙의 필요 승인 수는 0이라 GitHub가 이 순환을 강제하지는 않는다. 팀 약속으로 지킨다.
+
 브랜치 이름: `feat/` 기능, `fix/` 버그, `docs/` 문서, `data/` 규칙 데이터 수정
 
 커밋 메시지: `feat: 로드맵 학점 합계 표시`, `fix: 0학점 과목 오류`, `data: 빅데이터트랙 2026 교육과정 반영`
