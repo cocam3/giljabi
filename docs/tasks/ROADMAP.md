@@ -46,7 +46,7 @@
 ### 임솔: 서버 기반 → 찾다 AI, 사용성 테스트 준비
 | 번호 | 작업 | 선행 | 상태 |
 |---|---|---|---|
-| T-025 | **AGENTS.md·CLAUDE.md 갱신**: 2장 기술 스택(Supabase, 로그인), 3장 폴더 구조(`lib/db`·`lib/roadmap`·`lib/analytics`·`lib/export`·`supabase/`·`app/admin`·`app/roadmaps`), 4-3 개인정보(로그인 시 서버 저장 허용 범위, 이메일은 로그인 정보에만, 사용 기록 동의 규칙), 4-4 승인 수 0 + 리뷰 순환 반영. CODEOWNERS에 `/supabase/` 추가 검토. 코드 없음 | — | 초안. **서버 작업 전에 merge** |
+| T-025 | **AGENTS.md·CLAUDE.md 갱신**: 2장 기술 스택(Supabase, 로그인), 3장 폴더 구조(`lib/db`·`lib/roadmap`·`lib/analytics`·`lib/export`·`supabase/`·`app/admin`·`app/roadmaps`), 4-3 개인정보(로그인 시 서버 저장 허용 범위, 이메일은 로그인 정보에만, 사용 기록 동의 규칙), 4-4 승인 수 0 + 리뷰 순환 반영. CODEOWNERS에 `/supabase/` 추가 검토. 코드 없음 | — | 작성됨 (`T-025-agents-update.md`). **서버 작업 전에 merge** |
 | T-026 | **Supabase 기반 (Codex에 맡김)**: 프로젝트 생성(사람), 테이블·RLS 마이그레이션(`supabase/migrations`), 구글 로그인, `lib/db` 서버·브라우저 연결, 관리자 계정 표시, 사용 기록 테이블 자리, 1,400명/년 용량 계산, 무료 등급 일시정지 대비. 패키지 `@supabase/supabase-js`·`@supabase/ssr` 추가 승인 | T-025 | 초안 |
 | T-009 | 찾다 AI 추천 API + AI 성능 평가. 1부 API·2부 평가로 PR 2개 | T-001, T-002 | 작성됨 (초안, 개발은 Gemini 무료 등급) |
 | T-011 | 찾다 화면: 직무·공고 입력 → 추천 트랙과 근거 (S10·S11) | T-009 | 초안 |
